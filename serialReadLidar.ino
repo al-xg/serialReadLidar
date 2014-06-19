@@ -1,15 +1,24 @@
 /*
 http://xv11hacking.wikispaces.com/LIDAR+Sensor
+ 
+ A full revolution will yield 90 packets, containing 4 consecutive readings each.
+ The length of a packet is 22 bytes.
+ This amounts to a total of 360 readings (1 per degree) on 1980 bytes.
+ 
+ Each packet is organized as follows:
+ <start> <index> <speed_L> <speed_H> [Data 0] [Data 1] [Data 2] [Data 3] <checksum_L> <checksum_H>
+ */
 
-A full revolution will yield 90 packets, containing 4 consecutive readings each.
-The length of a packet is 22 bytes.
-This amounts to a total of 360 readings (1 per degree) on 1980 bytes.
-
-Each packet is organized as follows:
-<start> <index> <speed_L> <speed_H> [Data 0] [Data 1] [Data 2] [Data 3] <checksum_L> <checksum_H>
-*/
 
 
+const int NumSectors=6;
+int Sector=0;
+int packetCount=0;
+
+int minDistIndex = 0;
+int SectorMinDist =0;
+int minDist=0;
+int i=0;
 
 
 unsigned char b=0;
@@ -18,10 +27,10 @@ byte packet_index;
 unsigned char data[21];
 byte data_index=0;
 
-unsigned char b_speed[2], b_data0[4], b_data1[4], b_data2[4], b_data3[4], checksum[2];
+unsigned char checksum[2];
 
 double SpeedRPH;
-double  Distance[4], Quality[4];
+double  Distance[4], Quality[4], SectorData[(90/NumSectors)], LidarData[NumSectors];
 
 unsigned long report_time;
 unsigned long tmp_time;
@@ -35,11 +44,11 @@ void setup() {
 void loop(){
   if (Serial.available() > 0) {
     decode_data();
-    }
-    tmp_time=millis();
-    if (tmp_time > report_time+400) {
-      Serial.print(".");
-      report_time=millis();
+  }
+  tmp_time=millis();
+  if (tmp_time > report_time+400) {
+    Serial.print(".");
+    report_time=millis();
   }
 }
 
@@ -58,68 +67,98 @@ void decode_data(){
   }
 
   else if (init_level == 1){
-    // position index
+    // position index                  
     b = Serial.read();
     if (b >= 0xA0 & b <= 0xF9){ //is the index byte in the 90 packets, going from 0xA0 (packet 0, readings 0 to 3) to 0xF9 (packet 89, readings 356 to 359).
       packet_index = b - 0xA0;
-      init_level = 2;
       //Serial.println(packet_index);
+      init_level = 2;
       //Serial.println("level2");
+
+      //Sync sector count start with 0degrees
+      if (packet_index==0) {
+        Sector=0;
+      }
+
+      packetCount++;
+      if (packetCount>(90/NumSectors)){ //When the last packet of the sector is reached...
+        packetCount=0;
+
+        //Work out smallest distance reading of this Sector
+        minDistIndex = 0;
+        SectorMinDist= SectorData[minDistIndex];
+        for (i=0; i<(90/NumSectors); i++){
+          if (SectorMinDist<SectorData[i]){
+            SectorMinDist = SectorData[i];
+            minDistIndex = i;
+          }
+        }
+        LidarData[Sector]=SectorMinDist;
+        Serial.print(SectorMinDist);
+        
+        //Move to the next Sector
+        Sector++;
+      }
     }
     else if (b != 0xFA){
       init_level = 0;
     }
   }
 
- else if (init_level == 2){
+  else if (init_level == 2){
     //speed (2 bytes), 4x distance(4 bytes each), checksum (2 bytes)
     for (data_index=0; data_index <20; data_index++){ //store 20 bytes
       data[data_index]=Serial.read();
       //Serial.println(data_index);
     }
     data[data_index]='\0';
-    
-    //b_speed[0]=data[0];  //two-byte information, little-endian. It represents the speed, in 64th of RPM (aka value in RPM represented in fixed point, with 6 bits used for the decimal part).
-    //b_speed[1]=data[1];
+
+    //two-byte information, little-endian. It represents the speed, in 64th of RPM (aka value in RPM represented in fixed point, with 6 bits used for the decimal part).
     SpeedRPH=(data[0]<<8)|data[1];
     
-    //b_data0[0]=data[2];  //`byte 0 : <distance 7:0>` 14bit
-    //b_data0[1]=data[3];  //`byte 1 : <"invalid data" flag> <"strength warning" flag> <distance 13:8>`
+    //For each consecutive reading:
+      //`byte 0 : <distance 7:0>` 14bit
+      //`byte 1 : <"invalid data" flag> <"strength warning" flag> <distance 13:8>`
+      //`byte 2 : <signal strength 7:0>`
+      //`byte 3 : <signal strength 15:8>`
+    
+    //Reading 1
     Distance[0]=(data[2] | (data[3]& 0x3f)<<8);
-    //b_data0[2]=data[4];  //`byte 2 : <signal strength 7:0>`
-    //b_data0[3]=data[5];  //`byte 3 : <signal strength 15:8>`
     Quality[3]= data[4] | (data[5] << 8);
     
-    //b_data1[0]=data[6];
-    //b_data1[1]=data[7];
+    //Reading 2
     Distance[1]=(data[6] | (data[7]& 0x3f)<<8);
-    //b_data1[2]=data[8];
-    //b_data1[3]=data[9];
     Quality[3]= data[8] | (data[9] << 8);
-    
-    //b_data2[0]=data[10];
-    //b_data2[1]=data[11];
+  
+    //Reading 3
     Distance[2]=(data[10] | (data[11]& 0x3f)<<8);
-    //b_data2[2]=data[12];
-    //b_data2[3]=data[13];
     Quality[3]= data[12] | (data[13] << 8);
     
-    //b_data3[0]=data[14];
-    //b_data3[1]=data[15];
+    //Reading 4
     Distance[3]=(data[14] | (data[15]& 0x3f)<<8);
-    //b_data3[2]=data[16];
-    //b_data3[3]=data[17];
     Quality[3]= data[16] | (data[17] << 8);
-    
+
+    //Work out the minimum distance of this packet
+    minDistIndex = 0;
+    minDist= Distance[minDistIndex];
+    for (i=0; i<4; i++){
+      if (minDist<Distance[i]){
+        minDist = Distance[i];
+        minDistIndex = i;
+      }
+    }
+    SectorData[packetCount]=minDist;
+
+    //Checksum for this packet
     checksum[0]=data[18];
     checksum[1]=data[19];
     
+    //Move to the next packet
     init_level=0;
   }  
 
   else init_level = 0; // default, should never happen...
+
 }
-
-
 
 
