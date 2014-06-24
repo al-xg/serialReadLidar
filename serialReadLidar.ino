@@ -30,7 +30,8 @@ byte data_index=0;
 unsigned char checksum[2];
 
 double SpeedRPH;
-double  Distance[4], Quality[4], SectorData[(90/NumSectors)], LidarData[NumSectors];
+double  Distance[4], Quality[4];
+double  SectorData[15], LidarData[NumSectors];
 
 unsigned long report_time;
 unsigned long tmp_time;
@@ -47,7 +48,7 @@ void loop(){
   }
   tmp_time=millis();
   if (tmp_time > report_time+400) {
-    Serial.print(".");
+    //Serial.print(".");
     report_time=millis();
   }
 }
@@ -78,27 +79,33 @@ void decode_data(){
       //Sync sector count start with 0degrees
       if (packet_index==0) {
         Sector=0;
+        packetCount=0;
       }
 
-      packetCount++;
-      if (packetCount>(90/NumSectors)){ //When the last packet of the sector is reached...
+      
+      if (packetCount>(15)){ //Then the last packet of the sector has been reached...
         packetCount=0;
 
         //Work out smallest distance reading of this Sector
         minDistIndex = 0;
         SectorMinDist= SectorData[minDistIndex];
-        for (i=0; i<(90/NumSectors); i++){
+        for (i=0; i<15; i++){
           if (SectorMinDist<SectorData[i]){
             SectorMinDist = SectorData[i];
             minDistIndex = i;
           }
         }
         LidarData[Sector]=SectorMinDist;
-        Serial.print(SectorMinDist);
+        //LidarData[6]='\0';
+        Serial.print("Sector: ");
+        Serial.print(Sector);
+        Serial.print("  MinDist: ");
+        Serial.println(SectorMinDist);
         
         //Move to the next Sector
         Sector++;
       }
+      packetCount++;
     }
     else if (b != 0xFA){
       init_level = 0;
@@ -137,6 +144,9 @@ void decode_data(){
     //Reading 4
     Distance[3]=(data[14] | (data[15]& 0x3f)<<8);
     Quality[3]= data[16] | (data[17] << 8);
+    
+    //Distance[4]='\0';
+    //Quality[4]='\0';
 
     //Work out the minimum distance of this packet
     minDistIndex = 0;
@@ -148,6 +158,7 @@ void decode_data(){
       }
     }
     SectorData[packetCount]=minDist;
+    //SectorData[15]='\0';
 
     //Checksum for this packet
     checksum[0]=data[18];
