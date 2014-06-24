@@ -130,25 +130,38 @@ void decode_data(){
       //`byte 3 : <signal strength 15:8>`
     
     //Reading 1
-    Distance[0]=(data[2] | (data[3]& 0x3f)<<8);
-    Quality[3]= data[4] | (data[5] << 8);
+    //Distance[0]=(data[2] | (data[3] & 0x3f)<<8);
+    //Quality[3]= data[4] | (data[5] << 8);
+    
+    minDist=(data[2] | (data[3] & 0x3f)<<8);
     
     //Reading 2
-    Distance[1]=(data[6] | (data[7]& 0x3f)<<8);
-    Quality[3]= data[8] | (data[9] << 8);
-  
+    //Distance[1]=(data[6] | (data[7]& 0x3f)<<8);
+    //Quality[3]= data[8] | (data[9] << 8);
+    
+    if ((data[6] | (data[7]& 0x3f)<<8)<minDist) {minDist=(data[6] | (data[7]& 0x3f)<<8);}
+    
     //Reading 3
-    Distance[2]=(data[10] | (data[11]& 0x3f)<<8);
-    Quality[3]= data[12] | (data[13] << 8);
+    //Distance[2]=(data[10] | (data[11]& 0x3f)<<8);
+    //Quality[3]= data[12] | (data[13] << 8);
+    
+    if ((data[10] | (data[11]& 0x3f)<<8)<minDist) {minDist=(data[10] | (data[11]& 0x3f)<<8);}
     
     //Reading 4
+<<<<<<< HEAD
     Distance[3]=(data[14] | (data[15]& 0x3f)<<8);
     Quality[3]= data[16] | (data[17] << 8);
     
     //Distance[4]='\0';
     //Quality[4]='\0';
+=======
+    //Distance[3]=(data[14] | (data[15]& 0x3f)<<8);
+    //Quality[3]= data[16] | (data[17] << 8);
+    
+    if ((data[14] | (data[15]& 0x3f)<<8)<minDist) {minDist=(data[14] | (data[15]& 0x3f)<<8);}
+>>>>>>> origin/master
 
-    //Work out the minimum distance of this packet
+    /* //Work out the minimum distance of this packet
     minDistIndex = 0;
     minDist= Distance[minDistIndex];
     for (i=0; i<4; i++){
@@ -157,12 +170,13 @@ void decode_data(){
         minDistIndex = i;
       }
     }
+    */
     SectorData[packetCount]=minDist;
     //SectorData[15]='\0';
 
     //Checksum for this packet
-    checksum[0]=data[18];
-    checksum[1]=data[19];
+    //checksum[0]=data[18];
+    //checksum[1]=data[19];
     
     //Move to the next packet
     init_level=0;
