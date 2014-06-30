@@ -12,26 +12,26 @@ http://xv11hacking.wikispaces.com/LIDAR+Sensor
 
 
 const int NumSectors=6;
-int Sector=0;
-int packetCount=0;
+byte Sector=0;
+byte packetCount=0;
 
-int minDistIndex = 0;
-int SectorMinDist =0;
-int minDist=0;
-int i=0;
+byte minDistIndex = 0;
+unsigned long SectorMinDist =0;
+unsigned long minDist=0;
+byte i=0;
 
 
-unsigned char b=0;
+byte b=0;
 byte init_level=0;
 byte packet_index;
-unsigned char data[21];
+unsigned long data[21];
 byte data_index=0;
 
-unsigned char checksum[2];
+//unsigned long checksum[2];
 
-double SpeedRPH;
-double  Distance[4], Quality[4];
-double  SectorData[15], LidarData[NumSectors];
+unsigned long  SpeedRPH;
+//unsigned long  Distance[4], Quality[4];
+unsigned long   SectorData[15], LidarData[6];
 
 unsigned long report_time;
 unsigned long tmp_time;
@@ -83,7 +83,7 @@ void decode_data(){
       }
 
       
-      if (packetCount>(15)){ //Then the last packet of the sector has been reached...
+      if (packetCount>=(14)){ //Then the last packet of the sector has been reached...
         packetCount=0;
 
         //Work out smallest distance reading of this Sector
@@ -95,12 +95,14 @@ void decode_data(){
             minDistIndex = i;
           }
         }
-        LidarData[Sector]=SectorMinDist;
-        //LidarData[6]='\0';
+        
         Serial.print("Sector: ");
         Serial.print(Sector);
         Serial.print("  MinDist: ");
         Serial.println(SectorMinDist);
+        
+        LidarData[Sector]=SectorMinDist;
+        //LidarData[6]='\0';
         
         //Move to the next Sector
         Sector++;
@@ -118,7 +120,7 @@ void decode_data(){
       data[data_index]=Serial.read();
       //Serial.println(data_index);
     }
-    data[data_index]='\0';
+    //data[data_index]='\0';
 
     //two-byte information, little-endian. It represents the speed, in 64th of RPM (aka value in RPM represented in fixed point, with 6 bits used for the decimal part).
     SpeedRPH=(data[0]<<8)|data[1];
@@ -148,19 +150,15 @@ void decode_data(){
     if ((data[10] | (data[11]& 0x3f)<<8)<minDist) {minDist=(data[10] | (data[11]& 0x3f)<<8);}
     
     //Reading 4
-<<<<<<< HEAD
-    Distance[3]=(data[14] | (data[15]& 0x3f)<<8);
-    Quality[3]= data[16] | (data[17] << 8);
-    
-    //Distance[4]='\0';
-    //Quality[4]='\0';
-=======
     //Distance[3]=(data[14] | (data[15]& 0x3f)<<8);
     //Quality[3]= data[16] | (data[17] << 8);
     
+    
     if ((data[14] | (data[15]& 0x3f)<<8)<minDist) {minDist=(data[14] | (data[15]& 0x3f)<<8);}
->>>>>>> origin/master
 
+  //Distance[4]='\0';
+    //Quality[4]='\0';
+    
     /* //Work out the minimum distance of this packet
     minDistIndex = 0;
     minDist= Distance[minDistIndex];
