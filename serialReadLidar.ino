@@ -90,8 +90,8 @@ void decode_data(){
         //Work out smallest distance reading of this Sector
         minDistIndex = 0;
         SectorMinDist= SectorData[minDistIndex];
-        for (i=0; i<15; i++){
-          if (SectorMinDist<SectorData[i]){
+        for (i=0; i<14; i++){
+          if (SectorMinDist>SectorData[i]){
             SectorMinDist = SectorData[i];
             minDistIndex = i;
           }
@@ -108,7 +108,7 @@ void decode_data(){
         //Move to the next Sector
         Sector++;
       }
-      packetCount++;
+      
     }
     else if (b != 0xFA){
       init_level = 0;
@@ -180,6 +180,7 @@ void decode_data(){
     //checksum[1]=data[19];
     
     //Move to the next packet
+    packetCount++;
     init_level=0;
   }  
 
