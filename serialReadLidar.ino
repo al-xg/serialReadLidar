@@ -136,27 +136,29 @@ void decode_data(){
     //Distance[0]=(data[2] | (data[3] & 0x3f)<<8);
     //Quality[3]= data[4] | (data[5] << 8);
     
-    minDist=(data[2] | (data[3] & 0x3f)<<8);
-    
+    minDist=999999;
+    if ((data[3] & 0b11100000)==0){
+      minDist=(data[2] | (data[3] & 0x3f)<<8);
+    }
     //Reading 2
     //Distance[1]=(data[6] | (data[7]& 0x3f)<<8);
     //Quality[3]= data[8] | (data[9] << 8);
-    
-    if ((data[6] | (data[7]& 0x3f)<<8)<minDist) {minDist=(data[6] | (data[7]& 0x3f)<<8);}
-    
+    if ((data[7] & 0b11100000)==0){
+      if ((data[6] | (data[7]& 0x3f)<<8)<minDist) {minDist=(data[6] | (data[7]& 0x3f)<<8);}
+    }
     //Reading 3
     //Distance[2]=(data[10] | (data[11]& 0x3f)<<8);
     //Quality[3]= data[12] | (data[13] << 8);
-    
-    if ((data[10] | (data[11]& 0x3f)<<8)<minDist) {minDist=(data[10] | (data[11]& 0x3f)<<8);}
-    
+    if ((data[11] & 0b11100000)==0){
+      if ((data[10] | (data[11]& 0x3f)<<8)<minDist) {minDist=(data[10] | (data[11]& 0x3f)<<8);}
+    }
     //Reading 4
     //Distance[3]=(data[14] | (data[15]& 0x3f)<<8);
     //Quality[3]= data[16] | (data[17] << 8);
     
-    
-    if ((data[14] | (data[15]& 0x3f)<<8)<minDist) {minDist=(data[14] | (data[15]& 0x3f)<<8);}
-
+    if ((data[14] & 0b11100000)==0){
+      if ((data[14] | (data[15]& 0x3f)<<8)<minDist) {minDist=(data[14] | (data[15]& 0x3f)<<8);}
+    }
   //Distance[4]='\0';
     //Quality[4]='\0';
     
