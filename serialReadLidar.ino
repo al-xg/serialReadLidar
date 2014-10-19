@@ -40,10 +40,11 @@ unsigned long tmp_time;
 
 void setup() {
   Serial.begin(115200);
+  Serial1.begin(115200);
 }
 
 void loop(){
-  if (Serial.available() > 0) {
+  if (Serial1.available() > 7) {
     decode_data();
   }
   tmp_time=millis();
@@ -58,7 +59,7 @@ void loop(){
 void decode_data(){
   if (init_level == 0) {
     //header
-    b = Serial.read();
+    b = Serial1.read();
 
     if (b == 0xFA ){
       //Serial.println("level1");
@@ -69,7 +70,7 @@ void decode_data(){
 
   else if (init_level == 1){
     // position index                  
-    b = Serial.read();
+    b = Serial1.read();
     if (b >= 0xA0 & b <= 0xF9){ //is the index byte in the 90 packets, going from 0xA0 (packet 0, readings 0 to 3) to 0xF9 (packet 89, readings 356 to 359).
       packet_index = b - 0xA0;
       //Serial.println(packet_index);
@@ -89,8 +90,8 @@ void decode_data(){
         //Work out smallest distance reading of this Sector
         minDistIndex = 0;
         SectorMinDist= SectorData[minDistIndex];
-        for (i=0; i<15; i++){
-          if (SectorMinDist<SectorData[i]){
+        for (i=0; i<14; i++){
+          if (SectorMinDist>SectorData[i]){
             SectorMinDist = SectorData[i];
             minDistIndex = i;
           }
@@ -107,7 +108,7 @@ void decode_data(){
         //Move to the next Sector
         Sector++;
       }
-      packetCount++;
+      
     }
     else if (b != 0xFA){
       init_level = 0;
@@ -117,7 +118,7 @@ void decode_data(){
   else if (init_level == 2){
     //speed (2 bytes), 4x distance(4 bytes each), checksum (2 bytes)
     for (data_index=0; data_index <20; data_index++){ //store 20 bytes
-      data[data_index]=Serial.read();
+      data[data_index]=Serial1.read();
       //Serial.println(data_index);
     }
     //data[data_index]='\0';
@@ -135,27 +136,29 @@ void decode_data(){
     //Distance[0]=(data[2] | (data[3] & 0x3f)<<8);
     //Quality[3]= data[4] | (data[5] << 8);
     
-    minDist=(data[2] | (data[3] & 0x3f)<<8);
-    
+    minDist=999999;
+    if ((data[3] & 0b11000000)==0){
+      minDist=(data[2] | (data[3] & 0x3f)<<8);
+    }
     //Reading 2
     //Distance[1]=(data[6] | (data[7]& 0x3f)<<8);
     //Quality[3]= data[8] | (data[9] << 8);
-    
-    if ((data[6] | (data[7]& 0x3f)<<8)<minDist) {minDist=(data[6] | (data[7]& 0x3f)<<8);}
-    
+    if ((data[7] & 0b11000000)==0){
+      if ((data[6] | (data[7]& 0x3f)<<8)<minDist) {minDist=(data[6] | (data[7]& 0x3f)<<8);}
+    }
     //Reading 3
     //Distance[2]=(data[10] | (data[11]& 0x3f)<<8);
     //Quality[3]= data[12] | (data[13] << 8);
-    
-    if ((data[10] | (data[11]& 0x3f)<<8)<minDist) {minDist=(data[10] | (data[11]& 0x3f)<<8);}
-    
+    if ((data[11] & 0b11000000)==0){
+      if ((data[10] | (data[11]& 0x3f)<<8)<minDist) {minDist=(data[10] | (data[11]& 0x3f)<<8);}
+    }
     //Reading 4
     //Distance[3]=(data[14] | (data[15]& 0x3f)<<8);
     //Quality[3]= data[16] | (data[17] << 8);
     
-    
-    if ((data[14] | (data[15]& 0x3f)<<8)<minDist) {minDist=(data[14] | (data[15]& 0x3f)<<8);}
-
+    if ((data[14] & 0b11000000)==0){
+      if ((data[14] | (data[15]& 0x3f)<<8)<minDist) {minDist=(data[14] | (data[15]& 0x3f)<<8);}
+    }
   //Distance[4]='\0';
     //Quality[4]='\0';
     
@@ -177,6 +180,7 @@ void decode_data(){
     //checksum[1]=data[19];
     
     //Move to the next packet
+    packetCount++;
     init_level=0;
   }  
 
